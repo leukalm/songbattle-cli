@@ -19,7 +19,7 @@ import (
 
 const (
 	AppName         = "Song Battle"
-	AppVersion      = "1.0.0"
+	AppVersion      = "1.0.1"
 	DBName          = "songbattle.db"
 	DefaultClientID = "c0bf7a0584f544dbb3e6fc14dce4716c" // Public default Client ID
 )
