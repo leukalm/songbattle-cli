@@ -15,33 +15,33 @@ type DB struct {
 	*sql.DB
 }
 
-// NewDB initialise la connexion à la base de données et lance les migrations
+// NewDB initializes database connection and runs migrations
 func NewDB(dbPath string) (*DB, error) {
-	// Créer le dossier parent si nécessaire
+	// Create parent directory if needed
 	dir := filepath.Dir(dbPath)
 	if dir != "." {
-		// Utilisation de mkdir pour créer le dossier (si nécessaire on peut importer os)
+		// Using mkdir to create the folder (can import os if needed)
 		// os.MkdirAll(dir, 0755)
 	}
 
 	db, err := sql.Open("sqlite", dbPath+"?_foreign_keys=on")
 	if err != nil {
-		return nil, fmt.Errorf("erreur ouverture base de données: %w", err)
+		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Test de la connexion
+	// Test connection
 	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("erreur ping base de données: %w", err)
+		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
 	store := &DB{db}
 
-	// Lancer les migrations
+	// Run migrations
 	if err := store.migrate(); err != nil {
-		return nil, fmt.Errorf("erreur migration: %w", err)
+		return nil, fmt.Errorf("migration failed: %w", err)
 	}
 
-	log.Println("Base de données initialisée avec succès")
+	log.Println("Database initialized successfully")
 	return store, nil
 }
 

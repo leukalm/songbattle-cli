@@ -57,7 +57,7 @@ func (c *Client) GetUserTopTracks(limit int, timeRange spotify.Range) ([]*models
 // GetRecommendations récupère des recommandations
 func (c *Client) GetRecommendations(seedTracks, seedArtists, seedGenres []string, limit int) ([]*models.Track, error) {
 	seeds := spotify.Seeds{}
-	
+
 	// Convertir les IDs en format Spotify
 	for _, id := range seedTracks {
 		seeds.Tracks = append(seeds.Tracks, spotify.ID(id))
@@ -114,11 +114,11 @@ func (c *Client) GetAudioFeatures(trackID string) (*models.AudioFeatures, error)
 // PlayTrack joue un track sur l'appareil actif
 func (c *Client) PlayTrack(uri string) error {
 	uris := []spotify.URI{spotify.URI(uri)}
-	
+
 	playOptions := &spotify.PlayOptions{
 		URIs: uris,
 	}
-	
+
 	return c.client.PlayOpt(c.context, playOptions)
 }
 
@@ -152,7 +152,7 @@ func (c *Client) EnrichTrackWithAudioFeatures(track *models.Track) error {
 		// Ne pas échouer si les audio features ne sont pas disponibles
 		return nil
 	}
-	
+
 	track.AudioFeaturesJSON = *features
 	return nil
 }
@@ -225,6 +225,6 @@ func (c *Client) parseYear(releaseDate string) (int, error) {
 	if len(parts) == 0 {
 		return 0, fmt.Errorf("format de date invalide")
 	}
-	
+
 	return strconv.Atoi(parts[0])
 }

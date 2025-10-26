@@ -239,10 +239,10 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "escape":
-		// Retour au duel depuis audio features, erreur ou leaderboard
+		// Return to duel from audio features, error or leaderboard
 		if m.currentView == ViewLeaderboard {
 			m.currentView = ViewDuel
-			m.statusMessage = "Retour aux duels"
+			m.statusMessage = "Back to battles"
 			return m, nil
 		}
 		if m.currentView == ViewAudioFeatures || m.currentView == ViewError {
@@ -300,18 +300,18 @@ func (m Model) handleVote() (tea.Model, tea.Cmd) {
 	)
 }
 
-// handleSkip traite un skip de duel
+// handleSkip handles a duel skip
 func (m Model) handleSkip() (tea.Model, tea.Cmd) {
 	if m.leftTrack == nil || m.rightTrack == nil {
 		return m, nil
 	}
 
-	// Traiter le skip
+	// Process skip
 	if err := m.eloSystem.ProcessDuel(m.leftTrack.Track.ID, m.rightTrack.Track.ID, models.WinnerSkip); err != nil {
-		return m, m.sendError(fmt.Errorf("erreur skip duel: %w", err))
+		return m, m.sendError(fmt.Errorf("failed to skip duel: %w", err))
 	}
 
-	m.statusMessage = "⏭️ Duel passé !"
+	m.statusMessage = "⏭️ Battle skipped!"
 	return m, m.setupNextDuel
 }
 
@@ -378,12 +378,12 @@ func (m Model) handleExportPlaylist() (tea.Model, tea.Cmd) {
 	return m, m.exportPlaylist()
 }
 
-// handleShowLeaderboard affiche le classement
+// handleShowLeaderboard shows the leaderboard
 func (m Model) handleShowLeaderboard() (tea.Model, tea.Cmd) {
-	// Récupérer tous les tracks triés par Elo
+	// Get all tracks sorted by Elo
 	tracks, err := m.db.GetAllTracksWithRatings()
 	if err != nil {
-		m.statusMessage = "⚠️  Erreur chargement classement"
+		m.statusMessage = "⚠️  Failed to load leaderboard"
 		return m, nil
 	}
 
@@ -434,7 +434,7 @@ func (m Model) handleLeaderboardSelect() (tea.Model, tea.Cmd) {
 	m.rightTrack = opponent
 	m.focus = FocusLeft
 	m.currentView = ViewDuel
-	m.statusMessage = "Duel depuis le classement !"
+	m.statusMessage = "Battle from leaderboard!"
 
 	return m, nil
 }
@@ -568,7 +568,7 @@ func (m Model) renderError() string {
 		"",
 		errorStyle.Render("❌ "+m.errorMessage),
 		"",
-		helpStyle.Render("Appuyez sur 'r' ou Escape pour revenir  •  'q' pour quitter"),
+		helpStyle.Render("Press 'r' or Escape to return  •  'q' to quit"),
 	)
 
 	return content
@@ -643,11 +643,11 @@ func (m Model) renderAudioFeatures() string {
 
 %s
 
-Appuyez sur 'Escape' pour revenir au duel.
+Press 'Escape' to return to battle.
 `,
 		RenderHeader(),
 		RenderAudioFeatures(m.currentAudioFeatures),
-		RenderFooter("Détails des caractéristiques audio"),
+		RenderFooter("Audio features details"),
 	)
 
 	return ContainerStyle.Width(m.width - 4).Height(m.height - 4).Render(content)
@@ -660,9 +660,9 @@ func (m Model) renderLeaderboard() string {
 			lipgloss.Center,
 			RenderHeader(),
 			"",
-			"Aucun track dans le classement",
+			"No tracks in leaderboard",
 			"",
-			"Appuyez sur Escape pour revenir",
+			"Press Escape to return",
 		)
 	}
 
@@ -758,7 +758,7 @@ func (m Model) renderLeaderboard() string {
 	controls := lipgloss.NewStyle().
 		Foreground(ColorMuted).
 		Padding(1, 0).
-		Render("↑↓ naviguer  ␣ écouter  ↵ duel  q retour")
+		Render("↑↓ navigate  ␣ play  ↵ battle  q back")
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -767,7 +767,7 @@ func (m Model) renderLeaderboard() string {
 		lipgloss.JoinVertical(lipgloss.Left, lines...),
 		"",
 		controls,
-		RenderFooter(fmt.Sprintf("Classement - %d tracks", len(m.leaderboard))),
+		RenderFooter(fmt.Sprintf("Leaderboard - %d tracks", len(m.leaderboard))),
 	)
 
 	return content

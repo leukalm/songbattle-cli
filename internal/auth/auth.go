@@ -20,13 +20,13 @@ import (
 )
 
 const (
-	SpotifyAuthURL        = "https://accounts.spotify.com/authorize"
-	SpotifyTokenURL       = "https://accounts.spotify.com/api/token"
-	RedirectURI           = "http://127.0.0.1:8080/callback"          // Conforme Spotify 2025 (127.0.0.1 requis)
-	SecureRedirectURI     = "songbattle://callback"                   // Custom scheme (nécessite config OS)
-	HTTPSRedirectURI      = "https://127.0.0.1:8080/callback"         // Alternative HTTPS
-	CallbackPort          = ":8080"
-	CustomSchemePort      = ":8081" // Port alternatif pour custom scheme
+	SpotifyAuthURL    = "https://accounts.spotify.com/authorize"
+	SpotifyTokenURL   = "https://accounts.spotify.com/api/token"
+	RedirectURI       = "http://127.0.0.1:8080/callback"  // Conforme Spotify 2025 (127.0.0.1 requis)
+	SecureRedirectURI = "songbattle://callback"           // Custom scheme (requires OS config)
+	HTTPSRedirectURI  = "https://localhost:8080/callback" // HTTPS alternative
+	CallbackPort      = ":8080"
+	CustomSchemePort  = ":8081" // Alternative port for custom scheme
 )
 
 var RequiredScopes = []string{
@@ -38,50 +38,46 @@ var RequiredScopes = []string{
 }
 
 type SpotifyAuth struct {
-	ClientID      string
-	clientSecret  string // Optionnel pour PKCE
-	config        *oauth2.Config
-	db            *store.DB
-	redirectURI   string // URI de redirection détecté automatiquement
-	useCustomScheme bool // Utilise custom scheme ou HTTP(S)
+	ClientID        string
+	config          *oauth2.Config
+	db              *store.DB
+	redirectURI     string // Automatically detected redirect URI
+	useCustomScheme bool   // Uses custom scheme or HTTP(S)
 }
 
-// NewSpotifyAuth crée une nouvelle instance d'authentification Spotify
+// NewSpotifyAuth creates a new Spotify authentication instance
 func NewSpotifyAuth(clientID string, db *store.DB) *SpotifyAuth {
-	// Détection automatique du meilleur URI de redirection
+	// Automatic detection of the best redirect URI
 	redirectURI, useCustomScheme := detectBestRedirectURI()
-	
+
 	return newSpotifyAuthWithOptions(clientID, db, redirectURI, useCustomScheme)
 }
 
-// NewSpotifyAuthWithOptions crée une nouvelle instance avec des options spécifiques
+// NewSpotifyAuthWithOptions creates a new instance with specific options
 func NewSpotifyAuthWithOptions(clientID string, db *store.DB, customRedirectURI string, forceCustom, forceHTTPS bool) *SpotifyAuth {
-	var redirectURI string
-	var useCustomScheme bool
-	
 	if customRedirectURI != "" {
-		// URI spécifique fourni
-		redirectURI = customRedirectURI
-		useCustomScheme = strings.HasPrefix(redirectURI, "songbattle://")
-	} else if forceCustom {
-		// Forcer le schéma personnalisé
-		redirectURI = SecureRedirectURI
-		useCustomScheme = true
-	} else if forceHTTPS {
-		// Forcer HTTPS
-		redirectURI = HTTPSRedirectURI
-		useCustomScheme = false
-	} else {
-		// Détection automatique
-		redirectURI, useCustomScheme = detectBestRedirectURI()
+		// Specific URI provided
+		return newSpotifyAuthWithOptions(clientID, db, customRedirectURI, strings.HasPrefix(customRedirectURI, "songbattle://"))
 	}
-	
+
+	if forceCustom {
+		// Force custom scheme
+		return newSpotifyAuthWithOptions(clientID, db, SecureRedirectURI, true)
+	}
+
+	if forceHTTPS {
+		// Force HTTPS
+		return newSpotifyAuthWithOptions(clientID, db, HTTPSRedirectURI, false)
+	}
+
+	// Automatic detection
+	redirectURI, useCustomScheme := detectBestRedirectURI()
 	return newSpotifyAuthWithOptions(clientID, db, redirectURI, useCustomScheme)
 }
 
-// newSpotifyAuthWithOptions fonction interne pour créer l'instance
+// newSpotifyAuthWithOptions internal function to create the instance
 func newSpotifyAuthWithOptions(clientID string, db *store.DB, redirectURI string, useCustomScheme bool) *SpotifyAuth {
-	
+
 	config := &oauth2.Config{
 		ClientID:    clientID,
 		RedirectURL: redirectURI,
@@ -101,61 +97,61 @@ func newSpotifyAuthWithOptions(clientID string, db *store.DB, redirectURI string
 	}
 }
 
-// isDebugEnabled vérifie si le mode debug est activé
+// isDebugEnabled checks if debug mode is enabled
 func isDebugEnabled() bool {
 	return os.Getenv("SONGBATTLE_DEBUG") != ""
 }
 
-// debugLog affiche un message de debug si le mode debug est activé
+// debugLog displays a debug message if debug mode is enabled
 func debugLog(msg string, args ...interface{}) {
 	if isDebugEnabled() {
 		fmt.Printf("🐛 [DEBUG] "+msg+"\n", args...)
 	}
 }
 
-// detectBestRedirectURI détecte automatiquement le meilleur URI de redirection
+// detectBestRedirectURI automatically detects the best redirect URI
 func detectBestRedirectURI() (string, bool) {
-	debugLog("Début de détection automatique d'URI")
-	
-	// Priorité 1: Custom scheme (conforme aux nouvelles exigences Spotify 2025)
+	debugLog("Starting automatic URI detection")
+
+	// Priority 1: Custom scheme (compliant with Spotify 2025 requirements)
 	if isCustomSchemeSupported() {
-		fmt.Println("🔒 Utilisation du custom scheme sécurisé: songbattle://callback")
-		debugLog("Custom scheme supporté, utilisation de %s", SecureRedirectURI)
+		fmt.Println("🔒 Using secure custom scheme: songbattle://callback")
+		debugLog("Custom scheme supported, using %s", SecureRedirectURI)
 		return SecureRedirectURI, true
 	}
-	
-	// Priorité 2: HTTPS localhost (si certificat disponible)
+
+	// Priority 2: HTTPS localhost (if certificate available)
 	if isHTTPSLocalhostAvailable() {
-		fmt.Println("🔒 Utilisation de HTTPS localhost: https://localhost:8080/callback")
-		debugLog("HTTPS localhost disponible, utilisation de %s", HTTPSRedirectURI)
+		fmt.Println("🔒 Using HTTPS localhost: https://localhost:8080/callback")
+		debugLog("HTTPS localhost available, using %s", HTTPSRedirectURI)
 		return HTTPSRedirectURI, false
 	}
-	
-	// Fallback: HTTP localhost (pour anciennes apps uniquement)
-	fmt.Println("⚠️  Utilisation de HTTP localhost (non conforme aux nouvelles exigences Spotify)")
-	fmt.Println("   Considérez migrer vers songbattle://callback pour la conformité 2025")
-	debugLog("Fallback vers HTTP localhost: %s", RedirectURI)
+
+	// Fallback: HTTP localhost (for legacy apps only)
+	fmt.Println("⚠️  Using HTTP localhost (not compliant with new Spotify requirements)")
+	fmt.Println("   Consider migrating to songbattle://callback for 2025 compliance")
+	debugLog("Fallback to HTTP localhost: %s", RedirectURI)
 	return RedirectURI, false
 }
 
-// isCustomSchemeSupported vérifie si le custom scheme peut être utilisé
+// isCustomSchemeSupported checks if custom scheme can be used
 func isCustomSchemeSupported() bool {
-	// Le custom scheme nécessite une configuration OS spécifique
-	// Pour une meilleure UX, on utilise HTTP 127.0.0.1 par défaut (conforme Spotify 2025)
-	// Les utilisateurs avancés peuvent forcer le custom scheme avec -use-custom-scheme
-	debugLog("Vérification du support custom scheme: désactivé par défaut (false)")
+	// Custom scheme requires specific OS configuration
+	// For better UX, we use HTTP 127.0.0.1 by default (Spotify 2025 compliant)
+	// Advanced users can force custom scheme with -use-custom-scheme
+	debugLog("Checking custom scheme support: disabled by default (false)")
 	return false
 }
 
-// isHTTPSLocalhostAvailable vérifie si HTTPS localhost est disponible
+// isHTTPSLocalhostAvailable checks if HTTPS localhost is available
 func isHTTPSLocalhostAvailable() bool {
-	// Vérifier si des certificats sont disponibles
-	// Pour l'instant, on retourne false pour garder la simplicité
-	debugLog("Vérification HTTPS localhost: non disponible (false)")
+	// Check if certificates are available
+	// For now, return false to keep things simple
+	debugLog("Checking HTTPS localhost: not available (false)")
 	return false
 }
 
-// generateCodeVerifier génère un code verifier pour PKCE
+// generateCodeVerifier generates a code verifier for PKCE
 func generateCodeVerifier() (string, error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
@@ -164,7 +160,7 @@ func generateCodeVerifier() (string, error) {
 	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(bytes), nil
 }
 
-// generateCodeChallenge génère un code challenge à partir du verifier
+// generateCodeChallenge generates a code challenge from the verifier
 func generateCodeChallenge(verifier string) string {
 	hash := sha256.Sum256([]byte(verifier))
 	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(hash[:])
@@ -172,10 +168,10 @@ func generateCodeChallenge(verifier string) string {
 
 // Authenticate lance le processus d'authentification OAuth2 avec PKCE
 func (sa *SpotifyAuth) Authenticate(ctx context.Context) (*oauth2.Token, error) {
-	// Générer PKCE codes
+	// Generate PKCE codes
 	codeVerifier, err := generateCodeVerifier()
 	if err != nil {
-		return nil, fmt.Errorf("erreur génération code verifier: %w", err)
+		return nil, fmt.Errorf("code verifier generation error: %w", err)
 	}
 	codeChallenge := generateCodeChallenge(codeVerifier)
 
@@ -186,7 +182,7 @@ func (sa *SpotifyAuth) Authenticate(ctx context.Context) (*oauth2.Token, error) 
 	// Configuration du serveur selon le type d'URI
 	var server *http.Server
 	var port string
-	
+
 	if sa.useCustomScheme {
 		port = CustomSchemePort
 		server = &http.Server{Addr: port}
@@ -197,14 +193,14 @@ func (sa *SpotifyAuth) Authenticate(ctx context.Context) (*oauth2.Token, error) 
 
 	// Configuration du handler selon le type d'URI
 	if sa.useCustomScheme {
-		// Handler pour custom scheme - écoute sur tous les paths
+		// Handler for custom scheme - listens on all paths
 		http.HandleFunc("/", sa.handleCustomSchemeCallback(codeChan, errChan))
 	} else {
 		// Handler classique pour HTTP(S)
 		http.HandleFunc("/callback", sa.handleHTTPCallback(codeChan, errChan))
 	}
 
-	// Lancer le serveur en arrière-plan
+	// Launch server in background
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errChan <- fmt.Errorf("erreur serveur callback: %w", err)
@@ -216,27 +212,27 @@ func (sa *SpotifyAuth) Authenticate(ctx context.Context) (*oauth2.Token, error) 
 		oauth2.SetAuthURLParam("code_challenge", codeChallenge),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"))
 
-	fmt.Println("🎵 Authentification Spotify requise")
+	fmt.Println("🎵 Spotify authentication required")
 	if sa.useCustomScheme {
-		fmt.Println("🔒 Utilisation du mode sécurisé (Custom Scheme)")
-		fmt.Printf("🌐 Port d'écoute: localhost%s\n", port)
+		fmt.Println("🔒 Using secure mode (Custom Scheme)")
+		fmt.Printf("🌐 Listening on: localhost%s\n", port)
 	} else {
-		fmt.Printf("🌐 Port d'écoute: localhost%s\n", port)
+		fmt.Printf("🌐 Listening on: localhost%s\n", port)
 	}
-	fmt.Println("Ouverture de votre navigateur...")
-	fmt.Printf("Si ça ne marche pas, copiez cette URL: %s\n", authURL)
+	fmt.Println("Opening your browser...")
+	fmt.Printf("If it doesn't work, copy this URL: %s\n", authURL)
 
-	// Ouvrir le navigateur
+	// Open browser
 	if err := browser.OpenURL(authURL); err != nil {
-		fmt.Printf("Erreur ouverture navigateur: %v\n", err)
-		fmt.Printf("Veuillez ouvrir manuellement: %s\n", authURL)
+		fmt.Printf("Failed to open browser: %v\n", err)
+		fmt.Printf("Please open manually: %s\n", authURL)
 	}
 
 	// Attendre le code ou une erreur
 	var code string
 	select {
 	case code = <-codeChan:
-		// Code reçu
+		// Code received
 	case err := <-errChan:
 		return nil, err
 	case <-ctx.Done():
@@ -248,10 +244,10 @@ func (sa *SpotifyAuth) Authenticate(ctx context.Context) (*oauth2.Token, error) 
 	// Fermer le serveur
 	server.Shutdown(context.Background())
 
-	// Échanger le code contre un token avec PKCE
+	// Exchange code for token with PKCE
 	token, err := sa.exchangeCodeForToken(code, codeVerifier)
 	if err != nil {
-		return nil, fmt.Errorf("erreur échange code/token: %w", err)
+		return nil, fmt.Errorf("code/token exchange error: %w", err)
 	}
 
 	// Sauvegarder le token
@@ -262,7 +258,7 @@ func (sa *SpotifyAuth) Authenticate(ctx context.Context) (*oauth2.Token, error) 
 	return token, nil
 }
 
-// exchangeCodeForToken échange le code d'autorisation contre un token d'accès
+// exchangeCodeForToken exchanges authorization code for access token
 func (sa *SpotifyAuth) exchangeCodeForToken(code, codeVerifier string) (*oauth2.Token, error) {
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
@@ -275,7 +271,7 @@ func (sa *SpotifyAuth) exchangeCodeForToken(code, codeVerifier string) (*oauth2.
 	return sa.config.Exchange(ctx, code, oauth2.SetAuthURLParam("code_verifier", codeVerifier))
 }
 
-// SaveToken sauvegarde le token en base de données
+// SaveToken saves the token to database
 func (sa *SpotifyAuth) SaveToken(token *oauth2.Token) error {
 	if err := sa.db.SetMeta(models.MetaKeyAccessToken, token.AccessToken); err != nil {
 		return err
@@ -297,11 +293,11 @@ func (sa *SpotifyAuth) SaveToken(token *oauth2.Token) error {
 	return nil
 }
 
-// LoadToken charge le token depuis la base de données
+// LoadToken loads the token from database
 func (sa *SpotifyAuth) LoadToken() (*oauth2.Token, error) {
 	accessToken, err := sa.db.GetMeta(models.MetaKeyAccessToken)
 	if err != nil {
-		return nil, fmt.Errorf("aucun token d'accès trouvé: %w", err)
+		return nil, fmt.Errorf("no access token found: %w", err)
 	}
 
 	token := &oauth2.Token{AccessToken: accessToken}
@@ -321,7 +317,7 @@ func (sa *SpotifyAuth) LoadToken() (*oauth2.Token, error) {
 	return token, nil
 }
 
-// RefreshToken renouvelle le token d'accès
+// RefreshToken renews the access token
 func (sa *SpotifyAuth) RefreshToken(ctx context.Context, token *oauth2.Token) (*oauth2.Token, error) {
 	tokenSource := sa.config.TokenSource(ctx, token)
 	newToken, err := tokenSource.Token()
@@ -337,48 +333,48 @@ func (sa *SpotifyAuth) RefreshToken(ctx context.Context, token *oauth2.Token) (*
 	return newToken, nil
 }
 
-// IsTokenValid vérifie si le token est encore valide
+// IsTokenValid checks if the token is still valid
 func (sa *SpotifyAuth) IsTokenValid(token *oauth2.Token) bool {
 	if token == nil || token.AccessToken == "" {
 		return false
 	}
 
-	// Si pas d'expiry, considérer comme valide
+	// If no expiry, consider as valid
 	if token.Expiry.IsZero() {
 		return true
 	}
 
-	// Vérifier si le token expire dans les 5 prochaines minutes
+	// Check if token expires in the next 5 minutes
 	return time.Now().Add(5 * time.Minute).Before(token.Expiry)
 }
 
-// GetValidToken récupère un token valide (charge ou renouvelle si nécessaire)
+// GetValidToken retrieves a valid token (loads or renews if necessary)
 func (sa *SpotifyAuth) GetValidToken(ctx context.Context) (*oauth2.Token, error) {
-	debugLog("Début GetValidToken - URI configuré: %s", sa.redirectURI)
-	
+	debugLog("Starting GetValidToken - configured URI: %s", sa.redirectURI)
+
 	// Tenter de charger le token existant
 	token, err := sa.LoadToken()
 	if err != nil {
-		debugLog("Aucun token existant trouvé, nouvelle authentification requise: %v", err)
+		debugLog("No existing token found, new authentication required: %v", err)
 		// Aucun token, authentification requise
 		return sa.Authenticate(ctx)
 	}
 
 	// Vérifier si le token est valide
 	if sa.IsTokenValid(token) {
-		debugLog("Token existant valide, réutilisation")
+		debugLog("Existing token valid, reusing")
 		return token, nil
 	}
 
-	debugLog("Token expiré, tentative de refresh")
+	debugLog("Token expired, attempting refresh")
 	// Token expiré, tenter de le renouveler
 	if token.RefreshToken != "" {
 		newToken, err := sa.RefreshToken(ctx, token)
 		if err == nil {
-			debugLog("Token refreshé avec succès")
+			debugLog("Token refreshed successfully")
 			return newToken, nil
 		}
-		debugLog("Échec du refresh token: %v", err)
+		debugLog("Token refresh failed: %v", err)
 		// Si le refresh échoue, on continue vers une nouvelle authentification
 	}
 
@@ -391,7 +387,7 @@ func (sa *SpotifyAuth) handleHTTPCallback(codeChan chan string, errChan chan err
 	return func(w http.ResponseWriter, r *http.Request) {
 		code := r.URL.Query().Get("code")
 		if code == "" {
-			errChan <- fmt.Errorf("aucun code d'autorisation reçu")
+			errChan <- fmt.Errorf("no authorization code received")
 			return
 		}
 
@@ -421,7 +417,7 @@ func (sa *SpotifyAuth) handleCustomSchemeCallback(codeChan chan string, errChan 
 		// Mais l'OS peut rediriger vers http://localhost:8081/?code=...
 		code := r.URL.Query().Get("code")
 		if code == "" {
-			errChan <- fmt.Errorf("aucun code d'autorisation reçu via custom scheme")
+			errChan <- fmt.Errorf("no authorization code received via custom scheme")
 			return
 		}
 

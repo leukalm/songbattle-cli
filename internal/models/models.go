@@ -6,19 +6,19 @@ import (
 	"time"
 )
 
-// Track représente une chanson avec toutes ses métadonnées
+// Track represents a song with all its metadata
 type Track struct {
-	ID               int64     `json:"id" db:"id"`
-	SpotifyID        string    `json:"spotify_id" db:"spotify_id"`
-	Name             string    `json:"name" db:"name"`
-	Artist           string    `json:"artist" db:"artist"`
-	Album            string    `json:"album" db:"album"`
-	Year             int       `json:"year" db:"year"`
-	GenresJSON       Genres    `json:"genres" db:"genres_json"`
-	SpotifyURI       string    `json:"spotify_uri" db:"spotify_uri"`
-	PreviewURL       *string   `json:"preview_url" db:"preview_url"`
+	ID                int64         `json:"id" db:"id"`
+	SpotifyID         string        `json:"spotify_id" db:"spotify_id"`
+	Name              string        `json:"name" db:"name"`
+	Artist            string        `json:"artist" db:"artist"`
+	Album             string        `json:"album" db:"album"`
+	Year              int           `json:"year" db:"year"`
+	GenresJSON        Genres        `json:"genres" db:"genres_json"`
+	SpotifyURI        string        `json:"spotify_uri" db:"spotify_uri"`
+	PreviewURL        *string       `json:"preview_url" db:"preview_url"`
 	AudioFeaturesJSON AudioFeatures `json:"audio_features" db:"audio_features_json"`
-	CreatedAt        time.Time `json:"created_at" db:"created_at"`
+	CreatedAt         time.Time     `json:"created_at" db:"created_at"`
 }
 
 // Rating contient les statistiques Elo d'une chanson
@@ -31,7 +31,7 @@ type Rating struct {
 	LastSeenAt time.Time `json:"last_seen_at" db:"last_seen_at"`
 }
 
-// Duel représente un combat entre deux chansons
+// Duel represents a battle between two songs
 type Duel struct {
 	ID            int64     `json:"id" db:"id"`
 	LeftTrackID   int64     `json:"left_track_id" db:"left_track_id"`
@@ -40,16 +40,16 @@ type Duel struct {
 	CreatedAt     time.Time `json:"created_at" db:"created_at"`
 }
 
-// Meta stocke les métadonnées de l'application
+// Meta stores application metadata
 type Meta struct {
 	Key   string `json:"key" db:"key"`
 	Value string `json:"value" db:"value"`
 }
 
-// Genres est un type personnalisé pour stocker la liste des genres en JSON
+// Genres is a custom type to store the list of genres in JSON
 type Genres []string
 
-// AudioFeatures contient les caractéristiques audio Spotify
+// AudioFeatures contains Spotify audio characteristics
 type AudioFeatures struct {
 	Danceability     float64 `json:"danceability"`
 	Energy           float64 `json:"energy"`
@@ -65,18 +65,18 @@ type AudioFeatures struct {
 	TimeSignature    int     `json:"time_signature"`
 }
 
-// Implémentation de l'interface sql.Scanner et driver.Valuer pour Genres
+// Implementation of sql.Scanner and driver.Valuer interfaces for Genres
 func (g *Genres) Scan(value interface{}) error {
 	if value == nil {
 		*g = make(Genres, 0)
 		return nil
 	}
-	
+
 	bytes, ok := value.([]byte)
 	if !ok {
 		return nil
 	}
-	
+
 	return json.Unmarshal(bytes, g)
 }
 
@@ -87,18 +87,18 @@ func (g Genres) Value() (driver.Value, error) {
 	return json.Marshal(g)
 }
 
-// Implémentation de l'interface sql.Scanner et driver.Valuer pour AudioFeatures
+// Implementation of sql.Scanner and driver.Valuer interfaces for AudioFeatures
 func (af *AudioFeatures) Scan(value interface{}) error {
 	if value == nil {
 		*af = AudioFeatures{}
 		return nil
 	}
-	
+
 	bytes, ok := value.([]byte)
 	if !ok {
 		return nil
 	}
-	
+
 	return json.Unmarshal(bytes, af)
 }
 
@@ -112,12 +112,12 @@ type TrackWithRating struct {
 	Rating Rating `json:"rating"`
 }
 
-// DuelResult représente le résultat d'un duel
+// DuelResult represents the result of a duel
 type DuelResult struct {
 	Winner string `json:"winner"` // "left", "right", "draw", "skip"
 }
 
-// Constants pour les résultats de duel
+// Constants for duel results
 const (
 	WinnerLeft  = "left"
 	WinnerRight = "right"
@@ -125,7 +125,7 @@ const (
 	WinnerSkip  = "skip"
 )
 
-// Constants pour les métadonnées
+// Constants for metadata
 const (
 	MetaKeyAccessToken  = "access_token"
 	MetaKeyRefreshToken = "refresh_token"

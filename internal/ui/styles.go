@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Couleurs du thème
+// Theme colors
 var (
 	ColorPrimary   = lipgloss.AdaptiveColor{Light: "#7C3AED", Dark: "#A855F7"}
 	ColorSecondary = lipgloss.AdaptiveColor{Light: "#0891B2", Dark: "#06B6D4"}
@@ -59,7 +59,7 @@ var (
 			Width(36).
 			Align(lipgloss.Center)
 
-	// Album et année
+	// Album and year
 	AlbumStyle = lipgloss.NewStyle().
 			Foreground(ColorMuted).
 			Width(36).
@@ -84,7 +84,7 @@ var (
 			MarginTop(1).
 			Align(lipgloss.Center)
 
-	// Messages d'état
+	// Status messages
 	StatusStyle = lipgloss.NewStyle().
 			Foreground(ColorWarning).
 			Bold(true).
@@ -98,14 +98,14 @@ var (
 			Align(lipgloss.Center).
 			MarginTop(1)
 
-	// Messages de succès
+	// Success messages
 	SuccessStyle = lipgloss.NewStyle().
 			Foreground(ColorSuccess).
 			Bold(true).
 			Align(lipgloss.Center).
 			MarginTop(1)
 
-	// Séparateur
+	// Separator
 	SeparatorStyle = lipgloss.NewStyle().
 			Foreground(ColorBorder).
 			Align(lipgloss.Center).
@@ -146,7 +146,7 @@ var (
 
 // Fonctions utilitaires pour les styles
 
-// RenderTrackCard génère le rendu d'une card de track
+// RenderTrackCard generates the rendering of a track card
 func RenderTrackCard(name, artist, album string, year, elo, wins, losses int, active bool) string {
 	style := TrackCardStyle
 	if active {
@@ -170,9 +170,9 @@ func RenderTrackCard(name, artist, album string, year, elo, wins, losses int, ac
 	return style.Render(content)
 }
 
-// RenderVersus génère l'affichage "VS" avec hauteur fixe alignée
+// RenderVersus generates the "VS" display with aligned fixed height
 func RenderVersus() string {
-	// Même hauteur que les cartes (8) pour un alignement parfait
+	// Same height as cards (8) for perfect alignment
 	vs := lipgloss.NewStyle().
 		Foreground(ColorPrimary).
 		Bold(true).
@@ -185,9 +185,9 @@ func RenderVersus() string {
 	return vs
 }
 
-// RenderControls génère l'affichage des contrôles
+// RenderControls renders the controls display
 func RenderControls() string {
-	// Style pour les raccourcis
+	// Shortcut style
 	keyStyle := lipgloss.NewStyle().
 		Foreground(ColorPrimary).
 		Bold(true)
@@ -195,26 +195,26 @@ func RenderControls() string {
 	labelStyle := lipgloss.NewStyle().
 		Foreground(ColorMuted)
 
-	// Contrôles principaux
+	// Main controls
 	mainControls := fmt.Sprintf("%s %s  %s %s  %s %s",
 		keyStyle.Render("←→"),
-		labelStyle.Render("naviguer"),
+		labelStyle.Render("navigate"),
 		keyStyle.Render("␣"),
-		labelStyle.Render("écouter"),
+		labelStyle.Render("play"),
 		keyStyle.Render("↵"),
-		labelStyle.Render("voter"),
+		labelStyle.Render("vote"),
 	)
 
-	// Contrôles secondaires
+	// Secondary controls
 	secondaryControls := fmt.Sprintf("%s %s  %s %s  %s %s  %s %s",
 		keyStyle.Render("s"),
 		labelStyle.Render("skip"),
 		keyStyle.Render("c"),
-		labelStyle.Render("classement"),
+		labelStyle.Render("leaderboard"),
 		keyStyle.Render("g"),
 		labelStyle.Render("spotify"),
 		keyStyle.Render("q"),
-		labelStyle.Render("quitter"),
+		labelStyle.Render("quit"),
 	)
 
 	return lipgloss.JoinVertical(
@@ -224,7 +224,7 @@ func RenderControls() string {
 	)
 }
 
-// RenderHeader génère l'en-tête de l'application
+// RenderHeader generates the application header
 func RenderHeader() string {
 	title := lipgloss.NewStyle().
 		Foreground(ColorPrimary).
@@ -238,10 +238,10 @@ func RenderHeader() string {
 	return lipgloss.JoinVertical(lipgloss.Center, title, separator)
 }
 
-// RenderFooter génère le pied de page
+// RenderFooter renders the footer
 func RenderFooter(message string) string {
 	if message == "" {
-		message = "Prêt pour le duel !"
+		message = "Ready to battle!"
 	}
 	return lipgloss.NewStyle().
 		Foreground(ColorSuccess).
@@ -249,7 +249,7 @@ func RenderFooter(message string) string {
 		Render(message)
 }
 
-// RenderStatus génère un message de statut
+// RenderStatus generates a status message
 func RenderStatus(message string, statusType string) string {
 	switch statusType {
 	case "error":
@@ -263,14 +263,14 @@ func RenderStatus(message string, statusType string) string {
 	}
 }
 
-// RenderSeparator génère un séparateur
+// RenderSeparator generates a separator
 func RenderSeparator() string {
 	return SeparatorStyle.Render("──────────────────────────────")
 }
 
 // Fonctions utilitaires
 
-// truncate tronque une chaîne si elle est trop longue
+// truncate truncates a string if it's too long
 func truncate(s string, max int) string {
 	if len(s) <= max {
 		return s
@@ -281,7 +281,7 @@ func truncate(s string, max int) string {
 	return s[:max-3] + "..."
 }
 
-// RenderAudioFeatures génère l'affichage des caractéristiques audio
+// RenderAudioFeatures generates the audio features display
 func RenderAudioFeatures(af map[string]float64) string {
 	if len(af) == 0 {
 		return ErrorStyle.Render("Aucune caractéristique audio disponible")
@@ -313,19 +313,19 @@ func RenderAudioFeatures(af map[string]float64) string {
 	)
 }
 
-// renderFeature génère l'affichage d'une caractéristique (0-1)
+// renderFeature generates the display of a feature (0-1)
 func renderFeature(name string, value float64) string {
 	percentage := int(value * 100)
 	bar := renderProgressBar(value, 20)
 	return fmt.Sprintf("%s: %s %d%%", name, bar, percentage)
 }
 
-// renderTempoFeature génère l'affichage du tempo
+// renderTempoFeature generates the tempo display
 func renderTempoFeature(name string, value float64) string {
 	return fmt.Sprintf("%s: %.0f BPM", name, value)
 }
 
-// renderProgressBar génère une barre de progression
+// renderProgressBar generates a progress bar
 func renderProgressBar(value float64, width int) string {
 	filled := int(value * float64(width))
 	bar := ""
@@ -341,7 +341,7 @@ func renderProgressBar(value float64, width int) string {
 	return bar
 }
 
-// GetScreenDimensions retourne les dimensions recommandées
+// GetScreenDimensions returns recommended dimensions
 func GetScreenDimensions() (int, int) {
-	return 100, 30 // Largeur, Hauteur recommandées
+	return 100, 30 // Recommended width, height
 }
