@@ -5,6 +5,16 @@ A terminal-based application for ranking your Spotify songs using the Elo rating
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+## Screenshots
+
+<div align="center">
+  <img src="assets/battle-view.png" alt="Battle View" width="800"/>
+  <p><em>1v1 song battle interface</em></p>
+
+  <img src="assets/leaderboard-view.png" alt="Leaderboard View" width="800"/>
+  <p><em>Ranked songs leaderboard</em></p>
+</div>
+
 ## Features
 
 - **Elo-based ranking** - Adaptive rating system (K-factor: 32→24→16)
