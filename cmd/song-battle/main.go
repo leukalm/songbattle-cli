@@ -21,221 +21,221 @@ const (
 	AppName         = "Song Battle"
 	AppVersion      = "1.0.0"
 	DBName          = "songbattle.db"
-	DefaultClientID = "c0bf7a0584f544dbb3e6fc14dce4716c" // Client ID public par défaut (à définir après déploiement)
+	DefaultClientID = "c0bf7a0584f544dbb3e6fc14dce4716c" // Public default Client ID
 )
 
 func main() {
-	// Configuration des flags
+	// Flag configuration
 	var (
-		clientID    = flag.String("client-id", "", "Spotify Client ID (requis)")
-		redirectURI = flag.String("redirect-uri", "", "URI de redirection (défaut: détection automatique)")
-		useCustom   = flag.Bool("use-custom-scheme", false, "Force l'utilisation du schéma personnalisé 'songbattle://'")
-		useHTTPS    = flag.Bool("use-https", false, "Force l'utilisation de HTTPS sur localhost:8080")
-		dbPath      = flag.String("db-path", getDefaultDBPath(), "Chemin vers la base de données SQLite")
-		importData  = flag.Bool("import", false, "Importer des données depuis Spotify")
-		showHelp    = flag.Bool("help", false, "Afficher l'aide")
-		version     = flag.Bool("version", false, "Afficher la version")
+		clientID    = flag.String("client-id", "", "Spotify Client ID (required)")
+		redirectURI = flag.String("redirect-uri", "", "Redirect URI (default: auto-detect)")
+		useCustom   = flag.Bool("use-custom-scheme", false, "Force custom scheme 'songbattle://'")
+		useHTTPS    = flag.Bool("use-https", false, "Force HTTPS on localhost:8080")
+		dbPath      = flag.String("db-path", getDefaultDBPath(), "SQLite database path")
+		importData  = flag.Bool("import", false, "Import data from Spotify")
+		showHelp    = flag.Bool("help", false, "Show help")
+		version     = flag.Bool("version", false, "Show version")
 	)
 	flag.Parse()
 
-	// Afficher la version
+	// Show version
 	if *version {
 		fmt.Printf("%s v%s\n", AppName, AppVersion)
 		return
 	}
 
-	// Afficher l'aide
+	// Show help
 	if *showHelp {
 		showUsage()
 		return
 	}
 
-	// Initialiser la base de données
+	// Initialize database
 	db, err := store.NewDB(*dbPath)
 	if err != nil {
-		log.Fatalf("❌ Erreur initialisation base de données: %v", err)
+		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer db.Close()
 
-	// Vérifier le Client ID - ordre de priorité:
-	// 1. Flag -client-id
-	// 2. Variable d'environnement
-	// 3. Valeur sauvegardée en DB
-	// 4. Client ID par défaut (si défini)
+	// Check Client ID - priority order:
+	// 1. -client-id flag
+	// 2. Environment variable
+	// 3. Saved value in DB
+	// 4. Default Client ID (if set)
 	if *clientID == "" {
 		if envClientID := os.Getenv("SPOTIFY_CLIENT_ID"); envClientID != "" {
 			*clientID = envClientID
 		} else if savedClientID, err := db.GetMeta("spotify_client_id"); err == nil && savedClientID != "" {
 			*clientID = savedClientID
-			fmt.Println("✓ Client ID récupéré depuis la configuration")
+			fmt.Println("✓ Using saved Client ID from configuration")
 		} else if DefaultClientID != "" {
 			*clientID = DefaultClientID
-			fmt.Println("ℹ️  Utilisation du Client ID par défaut")
-			fmt.Println("   Vous pouvez utiliser votre propre Client ID avec -client-id=VOTRE_CLIENT_ID")
+			fmt.Println("ℹ️  Using default Client ID")
+			fmt.Println("   You can use your own with -client-id=YOUR_CLIENT_ID")
 		}
 	}
 
-	// Si toujours pas de Client ID, afficher l'erreur
+	// Still no Client ID, show error
 	if *clientID == "" {
-		fmt.Println("❌ Erreur: Client ID Spotify requis")
-		fmt.Println("Utilisez -client-id=VOTRE_CLIENT_ID ou définissez la variable d'environnement SPOTIFY_CLIENT_ID")
+		fmt.Println("Error: Spotify Client ID required")
+		fmt.Println("Use -client-id=YOUR_CLIENT_ID or set SPOTIFY_CLIENT_ID environment variable")
 		showUsage()
 		os.Exit(1)
 	}
 
-	// Sauvegarder le client ID pour les prochaines fois
+	// Save Client ID for next time
 	if err := db.SetMeta("spotify_client_id", *clientID); err != nil {
-		// Non bloquant, juste un warning
-		fmt.Printf("⚠️  Impossible de sauvegarder le client ID: %v\n", err)
+		// Non-blocking, just a warning
+		fmt.Printf("⚠️  Failed to save Client ID: %v\n", err)
 	}
 
-	// Mode import de données explicite
+	// Explicit import mode
 	if *importData {
 		if err := runImportMode(db, *clientID, *redirectURI, *useCustom, *useHTTPS); err != nil {
-			log.Fatalf("❌ Erreur import données: %v", err)
+			log.Fatalf("Failed to import data: %v", err)
 		}
-		fmt.Println("\n🎵 Lancement des duels...")
+		fmt.Println("\n🎵 Starting battles...")
 	}
 
-	// Vérifier qu'on a des données pour les duels
+	// Check if we have data for battles
 	tracks, err := db.GetAllTracksWithRatings()
 	if err != nil {
-		log.Fatalf("❌ Erreur vérification données: %v", err)
+		log.Fatalf("Failed to check data: %v", err)
 	}
 
-	// Si pas assez de tracks, lancer l'import automatiquement
+	// Not enough tracks, auto-import
 	if len(tracks) < 2 {
-		fmt.Printf("📥 Aucune chanson détectée (%d tracks)\n", len(tracks))
-		fmt.Println("🔄 Import automatique de vos top tracks Spotify...\n")
+		fmt.Printf("📥 No songs detected (%d tracks)\n", len(tracks))
+		fmt.Println("🔄 Auto-importing your Spotify top tracks...\n")
 
 		if err := runImportMode(db, *clientID, *redirectURI, *useCustom, *useHTTPS); err != nil {
-			log.Fatalf("❌ Erreur import automatique: %v", err)
+			log.Fatalf("Failed to auto-import: %v", err)
 		}
 
-		fmt.Println("\n🎵 Lancement des duels...")
+		fmt.Println("\n🎵 Starting battles...")
 	}
 
-	// Lancer l'interface TUI
+	// Launch TUI
 	if err := runTUI(db, *clientID, *redirectURI, *useCustom, *useHTTPS); err != nil {
-		log.Fatalf("❌ Erreur interface: %v", err)
+		log.Fatalf("Failed to start UI: %v", err)
 	}
 }
 
-// runTUI lance l'interface utilisateur Bubble Tea
+// runTUI launches the Bubble Tea user interface
 func runTUI(db *store.DB, clientID, redirectURI string, useCustom, useHTTPS bool) error {
-	// Créer le modèle avec les options d'URI
+	// Create model with URI options
 	model := ui.NewModelWithOptions(db, clientID, redirectURI, useCustom, useHTTPS)
 
-	// Options du programme
+	// Program options
 	opts := []tea.ProgramOption{
 		tea.WithAltScreen(),
 		tea.WithMouseCellMotion(),
 	}
 
-	// Créer et lancer le programme
+	// Create and launch program
 	program := tea.NewProgram(model, opts...)
 
-	fmt.Printf("🎵 Lancement de %s v%s...\n", AppName, AppVersion)
+	fmt.Printf("🎵 Starting %s v%s...\n", AppName, AppVersion)
 
 	if _, err := program.Run(); err != nil {
-		return fmt.Errorf("erreur lancement TUI: %w", err)
+		return fmt.Errorf("failed to start TUI: %w", err)
 	}
 
 	return nil
 }
 
-// runImportMode lance le mode import de données
+// runImportMode runs the data import mode
 func runImportMode(db *store.DB, clientID, redirectURI string, useCustom, useHTTPS bool) error {
 	ctx := context.Background()
 
-	fmt.Printf("🎵 %s - Import de données v%s\n", AppName, AppVersion)
+	fmt.Printf("🎵 %s - Data Import v%s\n", AppName, AppVersion)
 	fmt.Println("════════════════════════════════════════")
 
-	// Initialiser l'authentification avec les options d'URI
+	// Initialize authentication with URI options
 	auth := auth.NewSpotifyAuthWithOptions(clientID, db, redirectURI, useCustom, useHTTPS)
 
-	fmt.Println("🔐 Authentification Spotify...")
+	fmt.Println("🔐 Authenticating with Spotify...")
 	token, err := auth.GetValidToken(ctx)
 	if err != nil {
-		return fmt.Errorf("erreur authentification: %w", err)
+		return fmt.Errorf("authentication failed: %w", err)
 	}
 
-	// Créer le client Spotify
+	// Create Spotify client
 	spotifyClient := spotify.NewClient(ctx, token, clientID)
 
-	// Importer les top tracks de l'utilisateur
-	fmt.Println("📥 Import des top tracks...")
+	// Import user's top tracks
+	fmt.Println("📥 Importing top tracks...")
 	if err := importUserTopTracks(db, spotifyClient); err != nil {
-		return fmt.Errorf("erreur import top tracks: %w", err)
+		return fmt.Errorf("failed to import top tracks: %w", err)
 	}
 
-	// Importer quelques recommandations (non bloquant)
-	fmt.Println("🎲 Import de recommandations...")
+	// Import recommendations (non-blocking)
+	fmt.Println("🎲 Importing recommendations...")
 	if err := importRecommendations(db, spotifyClient); err != nil {
-		fmt.Printf("   ⚠️  Impossible d'importer les recommandations: %v\n", err)
-		fmt.Println("   → Ce n'est pas grave, vous avez déjà assez de tracks pour jouer !")
+		fmt.Printf("   ⚠️  Failed to import recommendations: %v\n", err)
+		fmt.Println("   → No worries, you have enough tracks to play!")
 	}
 
-	fmt.Println("✅ Import terminé avec succès !")
-	fmt.Printf("Vous pouvez maintenant lancer: songbattle -client-id=%s\n", clientID)
+	fmt.Println("✅ Import completed successfully!")
+	fmt.Printf("You can now run: songbattle -client-id=%s\n", clientID)
 
 	return nil
 }
 
-// importUserTopTracks importe les top tracks de l'utilisateur
+// importUserTopTracks imports user's top tracks
 func importUserTopTracks(db *store.DB, client *spotify.Client) error {
-	// Importer top tracks à court terme
+	// Import short term top tracks
 	shortTermTracks, err := client.GetUserTopTracks(25, spotifyapi.ShortTermRange)
 	if err != nil {
-		fmt.Printf("⚠️  Erreur top tracks court terme: %v\n", err)
+		fmt.Printf("⚠️  Failed to get short term tracks: %v\n", err)
 	} else {
 		if err := saveTracks(db, shortTermTracks, client); err != nil {
 			return err
 		}
-		fmt.Printf("   ✓ %d tracks court terme importés\n", len(shortTermTracks))
+		fmt.Printf("   ✓ %d short term tracks imported\n", len(shortTermTracks))
 	}
 
-	// Importer top tracks à moyen terme
+	// Import medium term top tracks
 	mediumTermTracks, err := client.GetUserTopTracks(25, spotifyapi.MediumTermRange)
 	if err != nil {
-		fmt.Printf("⚠️  Erreur top tracks moyen terme: %v\n", err)
+		fmt.Printf("⚠️  Failed to get medium term tracks: %v\n", err)
 	} else {
 		if err := saveTracks(db, mediumTermTracks, client); err != nil {
 			return err
 		}
-		fmt.Printf("   ✓ %d tracks moyen terme importés\n", len(mediumTermTracks))
+		fmt.Printf("   ✓ %d medium term tracks imported\n", len(mediumTermTracks))
 	}
 
-	// Importer top tracks à long terme
+	// Import long term top tracks
 	longTermTracks, err := client.GetUserTopTracks(25, spotifyapi.LongTermRange)
 	if err != nil {
-		fmt.Printf("⚠️  Erreur top tracks long terme: %v\n", err)
+		fmt.Printf("⚠️  Failed to get long term tracks: %v\n", err)
 	} else {
 		if err := saveTracks(db, longTermTracks, client); err != nil {
 			return err
 		}
-		fmt.Printf("   ✓ %d tracks long terme importés\n", len(longTermTracks))
+		fmt.Printf("   ✓ %d long term tracks imported\n", len(longTermTracks))
 	}
 
 	return nil
 }
 
-// importRecommendations importe des recommandations basées sur les tracks existants
+// importRecommendations imports recommendations based on existing tracks
 func importRecommendations(db *store.DB, client *spotify.Client) error {
-	// Récupérer quelques tracks existants comme seeds
+	// Get some existing tracks as seeds
 	existingTracks, err := db.GetTopTracks(5)
 	if err != nil || len(existingTracks) == 0 {
-		fmt.Println("   ⚠️  Pas de tracks existants pour les recommandations")
+		fmt.Println("   ⚠️  No existing tracks for recommendations")
 		return nil
 	}
 
-	// Utiliser les IDs Spotify comme seeds
+	// Use Spotify IDs as seeds
 	seeds := make([]string, 0, len(existingTracks))
 	for _, track := range existingTracks {
 		seeds = append(seeds, track.Track.SpotifyID)
 	}
 
-	// Obtenir des recommandations
+	// Get recommendations
 	recommendations, err := client.GetRecommendations(seeds[:min(2, len(seeds))], []string{}, []string{}, 20)
 	if err != nil {
 		return err
@@ -245,33 +245,33 @@ func importRecommendations(db *store.DB, client *spotify.Client) error {
 		return err
 	}
 
-	fmt.Printf("   ✓ %d recommandations importées\n", len(recommendations))
+	fmt.Printf("   ✓ %d recommendations imported\n", len(recommendations))
 	return nil
 }
 
-// saveTracks sauvegarde une liste de tracks en base
+// saveTracks saves a list of tracks to database
 func saveTracks(db *store.DB, tracks []*models.Track, client *spotify.Client) error {
 	for _, track := range tracks {
-		// Vérifier si le track existe déjà
+		// Check if track already exists
 		if existing, _ := db.GetTrackBySpotifyID(track.SpotifyID); existing != nil {
-			continue // Skip si déjà existant
+			continue // Skip if already exists
 		}
 
-		// Enrichir avec les audio features
+		// Enrich with audio features
 		if err := client.EnrichTrackWithAudioFeatures(track); err != nil {
-			fmt.Printf("   ⚠️  Impossible d'enrichir %s: %v\n", track.Name, err)
+			fmt.Printf("   ⚠️  Failed to enrich %s: %v\n", track.Name, err)
 		}
 
-		// Sauvegarder en base
+		// Save to database
 		if err := db.CreateTrack(track); err != nil {
-			return fmt.Errorf("erreur sauvegarde track %s: %w", track.Name, err)
+			return fmt.Errorf("failed to save track %s: %w", track.Name, err)
 		}
 	}
 
 	return nil
 }
 
-// getDefaultDBPath retourne le chemin par défaut de la base de données
+// getDefaultDBPath returns the default database path
 func getDefaultDBPath() string {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -284,7 +284,7 @@ func getDefaultDBPath() string {
 	return filepath.Join(configDir, DBName)
 }
 
-// showUsage affiche l'aide d'utilisation
+// showUsage displays usage help
 func showUsage() {
 	fmt.Printf(`🎵 %s v%s - Duel de chansons avec système Elo
 
