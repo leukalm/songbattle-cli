@@ -1,0 +1,42 @@
+spotify:
+  # Configuration Spotify
+  client_id: ""  # À remplir avec votre Client ID Spotify
+  scopes:
+    - "user-read-playback-state"
+    - "user-modify-playback-state"
+    - "user-read-currently-playing"
+    - "playlist-modify-private"
+    - "user-top-read"
+  
+  # URL de redirection pour OAuth2 (ne pas changer)
+  redirect_uri: "http://localhost:8080/callback"
+
+database:
+  # Chemin vers la base de données SQLite
+  path: "./songbattle.db"
+  
+matchmaking:
+  # Configuration du système de matchmaking
+  elo_range: 100        # Différence d'Elo acceptable pour un match équilibré
+  exploration_rate: 0.15 # 15% des duels incluent un morceau peu joué
+  min_battles_for_balance: 5 # Minimum de duels avant matchmaking équilibré
+
+elo:
+  # Configuration du système Elo
+  initial_elo: 1200
+  k_factors:
+    new_player: 32      # K pour les nouveaux tracks (< 10 duels)
+    mid_player: 24      # K pour les tracks intermédiaires (10-30 duels)
+    experienced: 16     # K pour les tracks expérimentés (> 30 duels)
+
+ui:
+  # Configuration de l'interface utilisateur
+  width: 100
+  height: 30
+  theme: "default"
+
+app:
+  # Configuration générale de l'application
+  name: "Song Battle"
+  version: "1.0.0"
+  debug: false

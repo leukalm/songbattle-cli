@@ -1,0 +1,64 @@
+# Binaires (à la racine uniquement)
+/songbattle
+/song-battle
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Tests
+*.test
+*.out
+coverage.txt
+
+# Vendor
+vendor/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+*.bak
+
+# Database locale
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Builds et releases
+releases/
+dist/
+build/
+
+# Données sensibles
+.env
+.env.local
+*.pem
+*.key
+*.crt
+
+# Logs
+*.log
+
+# Fichiers temporaires
+tmp/
+temp/
+
+# Claude Code (IDE)
+.claude/
+
+# Rapports d'audit (confidentiels)
+AUDIT_REPORT.md
+
+# Prompts d'origine
+*_prompt.md
